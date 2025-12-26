@@ -87,6 +87,8 @@ export function CalendarGrid({
   const prevPxPerDayRef = useRef<number>(pxPerDay);
   const isInitialMountRef = useRef<boolean>(true);
   const centerDayIndexRef = useRef<number | null>(null);
+  const centerContainerWidthRef = useRef<number | null>(null);
+  const pendingScrollAdjustmentRef = useRef<{ centerDayIndex: number; newPxPerDay: number; containerWidth: number } | null>(null);
   const [maxTimeSpanRows, setMaxTimeSpanRows] = useState(0);
 
   // Generate date range
@@ -195,20 +197,40 @@ export function CalendarGrid({
     if (!scrollContainerRef.current) return;
     
     const container = scrollContainerRef.current;
-    const containerWidth = container.clientWidth;
     
     if (isInitialMountRef.current && todayIndex >= 0) {
       // Initial mount: position today
+      const containerWidth = container.clientWidth;
       const offset = calculateScrollOffset(pxPerDay, todayIndex, containerWidth);
-      container.scrollLeft = offset;
+      // Use requestAnimationFrame for Safari compatibility
+      requestAnimationFrame(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollLeft = offset;
+        }
+      });
       isInitialMountRef.current = false;
-    } else if (centerDayIndexRef.current !== null && prevPxPerDayRef.current !== pxPerDay) {
-      // User zoom: maintain center
-      const centerDayIndex = centerDayIndexRef.current;
-      const centerPosition = centerDayIndex * pxPerDay;
-      const newScrollLeft = centerPosition - containerWidth / 2;
-      container.scrollLeft = Math.max(0, newScrollLeft);
-      centerDayIndexRef.current = null; // Reset after applying
+    } else if (prevPxPerDayRef.current !== pxPerDay && !pendingScrollAdjustmentRef.current) {
+      // Zoom changed via button/slider (not wheel): maintain center day in the center
+      // Calculate center day index from current scroll position using OLD pxPerDay
+      const scrollLeft = container.scrollLeft;
+      const containerWidth = container.clientWidth;
+      const centerPosition = scrollLeft + containerWidth / 2;
+      const centerDayIndex = centerPosition / prevPxPerDayRef.current;
+      
+      // Calculate new scroll position to keep the same day centered
+      const newCenterPosition = centerDayIndex * pxPerDay;
+      const newScrollLeft = newCenterPosition - containerWidth / 2;
+      
+      // Use requestAnimationFrame for Safari compatibility
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (scrollContainerRef.current) {
+            const currentContainerWidth = scrollContainerRef.current.clientWidth;
+            const finalScrollLeft = centerDayIndex * pxPerDay - currentContainerWidth / 2;
+            scrollContainerRef.current.scrollLeft = Math.max(0, finalScrollLeft);
+          }
+        });
+      });
     }
     
     prevPxPerDayRef.current = pxPerDay;
@@ -260,16 +282,39 @@ export function CalendarGrid({
         const containerWidth = container.clientWidth;
         const centerPosition = scrollLeft + containerWidth / 2;
         const centerDayIndex = centerPosition / pxPerDay;
-        centerDayIndexRef.current = centerDayIndex;
-      }
-      
-      // Proportional zoom step (5% of current zoom level)
-      const zoomStep = Math.max(2, Math.round(pxPerDay * 0.05));
-      const delta = e.deltaY > 0 ? -zoomStep : zoomStep;
-      const newPxPerDay = Math.max(minZoom, Math.min(maxZoom, pxPerDay + delta));
-      
-      if (newPxPerDay !== pxPerDay) {
-        onZoomChange(newPxPerDay);
+        
+        // Proportional zoom step (2% of current zoom level - slower zoom)
+        const zoomStep = Math.max(1, Math.round(pxPerDay * 0.02));
+        const delta = e.deltaY > 0 ? -zoomStep : zoomStep;
+        const newPxPerDay = Math.max(minZoom, Math.min(maxZoom, pxPerDay + delta));
+        
+        if (newPxPerDay !== pxPerDay) {
+          // Save scroll adjustment info to apply after React re-renders
+          pendingScrollAdjustmentRef.current = {
+            centerDayIndex,
+            newPxPerDay,
+            containerWidth
+          };
+          
+          onZoomChange(newPxPerDay);
+          
+          // Apply scroll adjustment after React has rendered with new pxPerDay
+          // Use multiple requestAnimationFrame to wait for layout update
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                if (scrollContainerRef.current && pendingScrollAdjustmentRef.current) {
+                  const { centerDayIndex: savedCenterDayIndex, newPxPerDay: savedNewPxPerDay, containerWidth: savedContainerWidth } = pendingScrollAdjustmentRef.current;
+                  const currentContainerWidth = scrollContainerRef.current.clientWidth;
+                  const centerPosition = savedCenterDayIndex * savedNewPxPerDay;
+                  const newScrollLeft = centerPosition - currentContainerWidth / 2;
+                  scrollContainerRef.current.scrollLeft = Math.max(0, newScrollLeft);
+                  pendingScrollAdjustmentRef.current = null;
+                }
+              });
+            });
+          });
+        }
       }
     }
     // If horizontal scroll, let it pass through for normal scrolling

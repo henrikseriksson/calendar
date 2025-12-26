@@ -54,7 +54,7 @@ export function DayColumn({ date, events, pxPerDay, timeSpanRows = 0 }: DayColum
         }}
       >
         <span className={labelClasses}>
-          {formatDayHeader(date)}
+          {formatDayHeader(date, isCompact)}
         </span>
       </div>
 
@@ -69,56 +69,63 @@ export function DayColumn({ date, events, pxPerDay, timeSpanRows = 0 }: DayColum
 
       {/* Timed events */}
       <div className="day-content">
-        {isCompact ? (
-          // Compact: just show chips
-          <div className="compact-events">
-            {timedEvents.slice(0, 5).map((event) => (
-              <EventCard key={event.id} event={event} isCompact={true} />
-            ))}
-            {timedEvents.length > 5 && (
-              <span className="more-events">+{timedEvents.length - 5} more</span>
-            )}
-          </div>
-        ) : (
-          // Detailed: show time grid (07:00 - 22:00)
-          <div className="time-grid">
-            {/* Hour lines */}
-            {Array.from({ length: VISIBLE_HOURS + 1 }, (_, i) => {
-              const hour = START_HOUR + i;
-              return (
-                <div 
-                  key={hour} 
-                  className="hour-line" 
-                  style={{ top: `${(i / VISIBLE_HOURS) * 100}%` }}
-                >
-                  <span className="hour-label">{hour.toString().padStart(2, '0')}</span>
-                </div>
-              );
-            })}
+        <div className="time-grid">
+          {/* Hour lines - only show when not compact */}
+          {!isCompact && Array.from({ length: VISIBLE_HOURS + 1 }, (_, i) => {
+            const hour = START_HOUR + i;
+            return (
+              <div 
+                key={hour} 
+                className="hour-line" 
+                style={{ top: `${(i / VISIBLE_HOURS) * 100}%` }}
+              >
+                <span className="hour-label">{hour.toString().padStart(2, '0')}</span>
+              </div>
+            );
+          })}
 
-            {/* Events positioned by time */}
-            {timedEvents.map((event) => {
-              const top = getTimePosition(event.startTs, START_HOUR, END_HOUR);
-              const height = getEventHeight(event.startTs, event.endTs, START_HOUR, END_HOUR);
-              
-              // Skip events entirely outside the visible range
-              if (top >= 100 || top + height <= 0) return null;
-              
-              return (
-                <div
-                  key={event.id}
-                  className="positioned-event"
-                  style={{
-                    top: `${Math.max(0, top)}%`,
-                    height: `${Math.max(Math.min(height, 100 - Math.max(0, top)), 2)}%`,
-                  }}
-                >
-                  <EventCard event={event} isCompact={false} />
-                </div>
-              );
-            })}
-          </div>
-        )}
+          {/* Events positioned by time - always positioned regardless of zoom */}
+          {timedEvents.map((event) => {
+            const top = getTimePosition(event.startTs, START_HOUR, END_HOUR);
+            const height = getEventHeight(event.startTs, event.endTs, START_HOUR, END_HOUR);
+            
+            // Skip events entirely outside the visible range
+            if (top >= 100 || top + height <= 0) return null;
+            
+            // Calculate actual top and height
+            // Use the full calculated height unless the event extends beyond the container
+            const actualTop = Math.max(0, top);
+            let actualHeight = height;
+            
+            // If event starts above visible area, adjust height
+            if (top < 0) {
+              actualHeight = height + top; // Reduce height by the amount above
+            }
+            
+            // Only clip height if event extends below the visible area (100%)
+            // This ensures events maintain their correct height based on time duration
+            const bottomPosition = actualTop + actualHeight;
+            if (bottomPosition > 100) {
+              actualHeight = 100 - actualTop;
+            }
+            
+            // Ensure minimum height for visibility
+            actualHeight = Math.max(actualHeight, 2);
+            
+            return (
+              <div
+                key={event.id}
+                className="positioned-event"
+                style={{
+                  top: `${actualTop}%`,
+                  height: `${actualHeight}%`,
+                }}
+              >
+                <EventCard event={event} isCompact={isCompact} />
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

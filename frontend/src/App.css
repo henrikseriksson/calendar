@@ -188,6 +188,7 @@
   overflow-x: auto;
   overflow-y: hidden;
   position: relative;
+  scroll-behavior: smooth;
 }
 
 .calendar-content {

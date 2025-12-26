@@ -30,8 +30,13 @@ export function parseGoogleDate(dateStr: string, isAllDay: boolean): number {
 
 /**
  * Format a date for display
+ * @param date The date to format
+ * @param compact If true, show only the day number (no weekday abbreviation)
  */
-export function formatDayHeader(date: Date): string {
+export function formatDayHeader(date: Date, compact?: boolean): string {
+  if (compact) {
+    return format(date, 'd', { locale: sv });
+  }
   return format(date, 'EEE d', { locale: sv });
 }
 
