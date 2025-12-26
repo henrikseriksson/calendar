@@ -1,5 +1,6 @@
 import { useRef, useEffect, useMemo, useCallback, useState } from 'react';
 import { DayColumn } from './DayColumn';
+import { TimeSpanLayer } from './TimeSpanLayer';
 import type { CalEvent } from '../types';
 import { getDateRange, startOfDay, isSameDay, getWeekNumber, getMonthIndex, getMonthName } from '../utils/dateUtils';
 
@@ -48,6 +49,7 @@ type CalendarGridProps = {
   events: CalEvent[];
   pxPerDay: number;
   getEventsForDay: (date: Date) => CalEvent[];
+  getTimeSpans: () => CalEvent[];
   daysBeforeToday?: number;
   daysAfterToday?: number;
 };
@@ -55,11 +57,13 @@ type CalendarGridProps = {
 export function CalendarGrid({
   pxPerDay,
   getEventsForDay,
+  getTimeSpans,
   daysBeforeToday = 60,
   daysAfterToday = 60,
 }: CalendarGridProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevPxPerDayRef = useRef<number>(pxPerDay);
+  const [maxTimeSpanRows, setMaxTimeSpanRows] = useState(0);
 
   // Generate date range
   const dates = useMemo(
@@ -255,6 +259,15 @@ export function CalendarGrid({
           );
         })}
 
+        {/* Time span layer */}
+        <TimeSpanLayer
+          timeSpans={getTimeSpans()}
+          dates={dates}
+          pxPerDay={pxPerDay}
+          visibleRange={visibleRange}
+          onMaxRowsChange={setMaxTimeSpanRows}
+        />
+
         {/* Day columns */}
         {dates.slice(visibleRange.start, visibleRange.end).map((date, i) => {
           const actualIndex = visibleRange.start + i;
@@ -273,6 +286,7 @@ export function CalendarGrid({
                 date={date}
                 events={getEventsForDay(date)}
                 pxPerDay={pxPerDay}
+                timeSpanRows={maxTimeSpanRows}
               />
             </div>
           );

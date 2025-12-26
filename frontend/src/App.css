@@ -240,6 +240,40 @@
   overflow: hidden;
 }
 
+/* Time Span Bars */
+.time-span-bar {
+  position: absolute;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.95);
+  z-index: 15;
+  border-radius: 4px;
+  overflow: hidden;
+  opacity: 0.8;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: opacity 0.2s ease;
+}
+
+.time-span-bar:hover {
+  opacity: 0.95;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.time-span-label {
+  white-space: nowrap;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
 /* Day Column */
 .day-column {
   height: 100%;
@@ -263,7 +297,7 @@
 
 .day-header {
   padding: 0.5rem;
-  padding-top: 42px; /* Space for month and week bars */
+  padding-top: 62px; /* Base space for month bar (20px), week bar (16px + 2px gap), and first time span row (20px + 2px gap) - will be overridden dynamically */
   text-align: center;
   border-bottom: 1px solid #e5e2dd;
   background: rgba(255, 255, 255, 0.6);
@@ -373,6 +407,32 @@
   flex-direction: column;
   gap: 2px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* Striped pattern for unresponded events (similar to Mac Calendar) */
+.event-card.rsvp-pending,
+.event-chip.rsvp-pending {
+  position: relative;
+  opacity: 0.75;
+}
+
+.event-card.rsvp-pending::before,
+.event-chip.rsvp-pending::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    rgba(255, 255, 255, 0.4) 4px,
+    rgba(255, 255, 255, 0.4) 8px
+  );
+  pointer-events: none;
+  border-radius: inherit;
 }
 
 .event-time {

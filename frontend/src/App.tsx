@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { CalendarGrid } from './components/CalendarGrid';
 import { AccountConnect } from './components/AccountConnect';
@@ -29,6 +29,7 @@ function CalendarApp() {
     error,
     refetch,
     getEventsForDay,
+    getTimeSpans,
   } = useCalendarEvents({ getToken });
 
   // Demo mode: return empty events
@@ -102,6 +103,7 @@ function CalendarApp() {
             events={demoMode ? [] : events}
             pxPerDay={pxPerDay}
             getEventsForDay={demoMode ? demoGetEventsForDay : getEventsForDay}
+            getTimeSpans={demoMode ? () => [] : getTimeSpans}
           />
         </>
       )}

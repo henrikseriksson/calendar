@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { AccountId, CalEvent, GoogleEventsResponse, GoogleCalendarEvent } from '../types';
-import { parseGoogleDate, addDays, startOfDay, endOfDay, format } from '../utils/dateUtils';
+import { parseGoogleDate, addDays, startOfDay, endOfDay, getDaysDifference } from '../utils/dateUtils';
 
 const CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3';
 const ACCOUNT_COLORS: Record<AccountId, string> = {
@@ -8,10 +8,34 @@ const ACCOUNT_COLORS: Record<AccountId, string> = {
   private: '#22c55e', // Green
 };
 
+// Different color palette for time spans (more muted, distinct from regular events)
+const TIMESPAN_COLORS: Record<AccountId, string> = {
+  work: '#6366f1',    // Indigo (more muted blue)
+  private: '#10b981', // Emerald (more muted green)
+};
+
 function normalizeEvent(event: GoogleCalendarEvent, accountId: AccountId): CalEvent {
   const isAllDay = !event.start.dateTime;
   const startStr = event.start.dateTime || event.start.date || '';
   const endStr = event.end.dateTime || event.end.date || '';
+
+  // Extract user's RSVP status from attendees
+  let rsvpStatus: CalEvent['rsvpStatus'] = undefined;
+  if (event.attendees && event.attendees.length > 0) {
+    // Find the attendee entry for the current user (self === true)
+    const userAttendee = event.attendees.find(attendee => attendee.self === true);
+    if (userAttendee && userAttendee.responseStatus) {
+      rsvpStatus = userAttendee.responseStatus;
+    }
+  }
+  // If there are no attendees or user is the organizer, assume accepted (no RSVP needed)
+  // Events without attendees array are typically events the user created
+
+  const startTs = parseGoogleDate(startStr, isAllDay);
+  const endTs = parseGoogleDate(endStr, isAllDay);
+  
+  // Detect time spans: all-day events spanning 2+ days
+  const isTimeSpan = isAllDay && getDaysDifference(startTs, endTs) >= 2;
 
   return {
     id: `${accountId}-${event.id}`,
@@ -21,9 +45,12 @@ function normalizeEvent(event: GoogleCalendarEvent, accountId: AccountId): CalEv
     start: startStr,
     end: endStr,
     timeZone: event.start.timeZone,
-    startTs: parseGoogleDate(startStr, isAllDay),
-    endTs: parseGoogleDate(endStr, isAllDay),
-    color: ACCOUNT_COLORS[accountId],
+    startTs,
+    endTs,
+    // Use different colors for time spans
+    color: isTimeSpan ? TIMESPAN_COLORS[accountId] : ACCOUNT_COLORS[accountId],
+    rsvpStatus,
+    isTimeSpan,
   };
 }
 
@@ -144,7 +171,7 @@ export function useCalendarEvents({
     fetchEvents();
   }, [fetchEvents]);
 
-  // Get events for a specific day
+  // Get events for a specific day (excluding time spans)
   const getEventsForDay = useCallback(
     (date: Date): CalEvent[] => {
       const dayStart = startOfDay(date).getTime();
@@ -152,11 +179,24 @@ export function useCalendarEvents({
 
       return events.filter((event) => {
         // Event overlaps with this day
-        return event.startTs < dayEnd && event.endTs > dayStart;
+        const overlapsDay = event.startTs < dayEnd && event.endTs > dayStart;
+        // Hide events where user has RSVP'd NO
+        const notDeclined = event.rsvpStatus !== 'declined';
+        // Exclude time spans from regular event display (they're shown in a separate layer)
+        const notTimeSpan = !event.isTimeSpan;
+        return overlapsDay && notDeclined && notTimeSpan;
       });
     },
     [events]
   );
+
+  // Get time spans (for separate rendering)
+  const getTimeSpans = useCallback((): CalEvent[] => {
+    return events.filter((event) => {
+      const notDeclined = event.rsvpStatus !== 'declined';
+      return event.isTimeSpan && notDeclined;
+    });
+  }, [events]);
 
   return {
     events,
@@ -164,6 +204,7 @@ export function useCalendarEvents({
     error,
     refetch: fetchEvents,
     getEventsForDay,
+    getTimeSpans,
   };
 }
 

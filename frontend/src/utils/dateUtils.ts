@@ -8,6 +8,7 @@ import {
   isToday,
   isSameDay,
   differenceInMinutes,
+  differenceInDays,
   startOfWeek,
   getHours,
   getMinutes,
@@ -115,5 +116,13 @@ export function getMonthIndex(date: Date): number {
  */
 export function getMonthName(date: Date): string {
   return format(date, 'MMMM', { locale: sv });
+}
+
+/**
+ * Calculate the difference in days between two timestamps
+ * For all-day events, this gives the number of days the event spans
+ */
+export function getDaysDifference(startTs: number, endTs: number): number {
+  return differenceInDays(new Date(endTs), new Date(startTs));
 }
 

@@ -12,12 +12,13 @@ type DayColumnProps = {
   date: Date;
   events: CalEvent[];
   pxPerDay: number;
+  timeSpanRows?: number;
 };
 
 // Threshold for showing compact view
 const COMPACT_THRESHOLD = 80;
 
-export function DayColumn({ date, events, pxPerDay }: DayColumnProps) {
+export function DayColumn({ date, events, pxPerDay, timeSpanRows = 0 }: DayColumnProps) {
   const isCompact = pxPerDay < COMPACT_THRESHOLD;
   const isTodayDate = isToday(date);
   const isWeekendDate = isWeekend(date);
@@ -44,7 +45,14 @@ export function DayColumn({ date, events, pxPerDay }: DayColumnProps) {
       className={columnClasses}
       style={{ width: pxPerDay }}
     >
-      <div className="day-header">
+      <div 
+        className="day-header"
+        style={{
+          paddingTop: timeSpanRows > 0 
+            ? `${62 + (timeSpanRows - 1) * 22}px` 
+            : '62px'
+        }}
+      >
         <span className={labelClasses}>
           {formatDayHeader(date)}
         </span>

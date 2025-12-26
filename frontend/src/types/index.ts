@@ -11,6 +11,8 @@ export type CalEvent = {
   startTs: number; // ms since epoch (for sorting/positioning)
   endTs: number;   // ms since epoch
   color?: string;  // For visual distinction
+  rsvpStatus?: 'needsAction' | 'declined' | 'tentative' | 'accepted'; // User's RSVP status
+  isTimeSpan?: boolean; // true if this is a multi-day time span (2+ days, all-day)
 };
 
 export type TokenData = {
@@ -24,6 +26,12 @@ export type AuthState = {
 };
 
 // Google Calendar API response types
+export type GoogleCalendarAttendee = {
+  email?: string;
+  responseStatus?: 'needsAction' | 'declined' | 'tentative' | 'accepted';
+  self?: boolean; // true if this attendee is the current user
+};
+
 export type GoogleCalendarEvent = {
   id: string;
   summary?: string;
@@ -36,6 +44,10 @@ export type GoogleCalendarEvent = {
     dateTime?: string;
     date?: string;
     timeZone?: string;
+  };
+  attendees?: GoogleCalendarAttendee[];
+  organizer?: {
+    email?: string;
   };
 };
 
