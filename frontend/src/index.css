@@ -1,0 +1,51 @@
+/* Reset & Base */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  font-family: 'IBM Plex Sans', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #faf9f7;
+  color: #2d2d2d;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f0eeeb;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c4c0b8;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a49c;
+}
+
+/* Selection */
+::selection {
+  background: rgba(99, 102, 241, 0.2);
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
