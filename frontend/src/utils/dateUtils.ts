@@ -32,7 +32,7 @@ export function parseGoogleDate(dateStr: string, isAllDay: boolean): number {
  * Format a date for display
  */
 export function formatDayHeader(date: Date): string {
-  return format(date, 'EEE d MMM', { locale: sv });
+  return format(date, 'EEE d', { locale: sv });
 }
 
 /**

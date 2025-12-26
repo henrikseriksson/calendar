@@ -32,6 +32,22 @@ const WEEK_COLORS = [
   '#5f5f5f', // Charcoal
 ];
 
+/**
+ * Lighten a hex color by mixing it with white
+ */
+function lightenColor(hex: string, amount: number): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  
+  const newR = Math.round(r + (255 - r) * amount);
+  const newG = Math.round(g + (255 - g) * amount);
+  const newB = Math.round(b + (255 - b) * amount);
+  
+  return `rgb(${newR}, ${newG}, ${newB})`;
+}
+
 type MonthSegment = {
   monthIndex: number;
   monthName: string;
@@ -288,7 +304,7 @@ export function CalendarGrid({
                 backgroundColor: MONTH_COLORS[segment.monthIndex],
               }}
             >
-              {segment.monthName}
+              <span className="month-bar-label">{segment.monthName}</span>
             </div>
           );
         })}
@@ -297,6 +313,10 @@ export function CalendarGrid({
         {visibleWeekSegments.map((segment) => {
           const left = segment.startIndex * pxPerDay;
           const width = (segment.endIndex - segment.startIndex + 1) * pxPerDay;
+          const baseColor = WEEK_COLORS[segment.weekNumber % WEEK_COLORS.length];
+          // Make every other week lighter
+          const isEvenWeek = segment.weekNumber % 2 === 0;
+          const backgroundColor = isEvenWeek ? baseColor : lightenColor(baseColor, 0.3);
           return (
             <div
               key={`week-${segment.startIndex}`}
@@ -304,10 +324,10 @@ export function CalendarGrid({
               style={{
                 left,
                 width,
-                backgroundColor: WEEK_COLORS[segment.weekNumber % WEEK_COLORS.length],
+                backgroundColor,
               }}
             >
-              w. {segment.weekNumber}
+              <span className="week-bar-label">w. {segment.weekNumber}</span>
             </div>
           );
         })}

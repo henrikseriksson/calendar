@@ -118,12 +118,6 @@ export function TimeSpanLayer({ timeSpans, dates, pxPerDay, visibleRange, onMaxR
   return (
     <>
       {visibleTimeSpans.map(({ span, left, width, rowIndex }) => {
-        // Calculate how many times the title can fit in the width
-        // Estimate: each character is ~6px, plus padding, so roughly 8px per character
-        // We'll show the title every ~200px or so
-        const titleSpacing = 200; // Show title every 200px
-        const titleCount = Math.max(1, Math.floor(width / titleSpacing));
-        
         // Calculate top position based on row index
         const top = 40 + rowIndex * (rowHeight + rowGap);
         
@@ -139,19 +133,10 @@ export function TimeSpanLayer({ timeSpans, dates, pxPerDay, visibleRange, onMaxR
             }}
             title={span.title}
           >
-            {/* Repeat title multiple times along the bar */}
-            {Array.from({ length: titleCount }, (_, i) => (
-              <span
-                key={i}
-                className="time-span-label"
-                style={{
-                  position: 'absolute',
-                  left: `${(i * titleSpacing) + 8}px`,
-                }}
-              >
-                {span.title}
-              </span>
-            ))}
+            {/* Single sticky label at the left edge */}
+            <span className="time-span-label">
+              {span.title}
+            </span>
           </div>
         );
       })}

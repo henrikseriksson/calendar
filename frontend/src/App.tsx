@@ -43,6 +43,18 @@ function CalendarApp() {
       <header className="app-header">
         <h1 className="app-title">Calendar</h1>
         <div className="header-controls">
+          {showCalendar && (
+            <>
+              <ZoomControls pxPerDay={pxPerDay} onZoomChange={setPxPerDay} />
+              <div className="event-count">
+                {demoMode ? (
+                  <span className="demo-label">Demo mode - <button onClick={() => setDemoMode(false)}>Exit</button></span>
+                ) : (
+                  loading ? 'Loading...' : `${events.length} events`
+                )}
+              </div>
+            </>
+          )}
           <AccountConnect
             onConnect={connect}
             onDisconnect={disconnect}
@@ -87,26 +99,13 @@ function CalendarApp() {
           </div>
         </div>
       ) : (
-        <>
-          <div className="toolbar">
-            <ZoomControls pxPerDay={pxPerDay} onZoomChange={setPxPerDay} />
-            <div className="event-count">
-              {demoMode ? (
-                <span className="demo-label">Demo mode - <button onClick={() => setDemoMode(false)}>Exit</button></span>
-              ) : (
-                loading ? 'Loading...' : `${events.length} events`
-              )}
-            </div>
-          </div>
-
-          <CalendarGrid
-            events={demoMode ? [] : events}
-            pxPerDay={pxPerDay}
-            onZoomChange={setPxPerDay}
-            getEventsForDay={demoMode ? demoGetEventsForDay : getEventsForDay}
-            getTimeSpans={demoMode ? () => [] : getTimeSpans}
-          />
-        </>
+        <CalendarGrid
+          events={demoMode ? [] : events}
+          pxPerDay={pxPerDay}
+          onZoomChange={setPxPerDay}
+          getEventsForDay={demoMode ? demoGetEventsForDay : getEventsForDay}
+          getTimeSpans={demoMode ? () => [] : getTimeSpans}
+        />
       )}
     </div>
   );
