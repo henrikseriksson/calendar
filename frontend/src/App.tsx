@@ -102,6 +102,7 @@ function CalendarApp() {
           <CalendarGrid
             events={demoMode ? [] : events}
             pxPerDay={pxPerDay}
+            onZoomChange={setPxPerDay}
             getEventsForDay={demoMode ? demoGetEventsForDay : getEventsForDay}
             getTimeSpans={demoMode ? () => [] : getTimeSpans}
           />

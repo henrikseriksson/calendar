@@ -48,21 +48,29 @@ type WeekSegment = {
 type CalendarGridProps = {
   events: CalEvent[];
   pxPerDay: number;
+  onZoomChange: (px: number) => void;
   getEventsForDay: (date: Date) => CalEvent[];
   getTimeSpans: () => CalEvent[];
   daysBeforeToday?: number;
   daysAfterToday?: number;
+  minZoom?: number;
+  maxZoom?: number;
 };
 
 export function CalendarGrid({
   pxPerDay,
+  onZoomChange,
   getEventsForDay,
   getTimeSpans,
   daysBeforeToday = 60,
   daysAfterToday = 60,
+  minZoom = 30,
+  maxZoom = 250,
 }: CalendarGridProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevPxPerDayRef = useRef<number>(pxPerDay);
+  const isInitialMountRef = useRef<boolean>(true);
+  const centerDayIndexRef = useRef<number | null>(null);
   const [maxTimeSpanRows, setMaxTimeSpanRows] = useState(0);
 
   // Generate date range
@@ -166,14 +174,28 @@ export function CalendarGrid({
     return segments;
   }, [dates]);
 
-  // Scroll to today on mount and when zoom changes
+  // Scroll to today on initial mount, or maintain center when zooming
   useEffect(() => {
-    if (scrollContainerRef.current && todayIndex >= 0) {
-      const containerWidth = scrollContainerRef.current.clientWidth;
+    if (!scrollContainerRef.current) return;
+    
+    const container = scrollContainerRef.current;
+    const containerWidth = container.clientWidth;
+    
+    if (isInitialMountRef.current && todayIndex >= 0) {
+      // Initial mount: position today
       const offset = calculateScrollOffset(pxPerDay, todayIndex, containerWidth);
-      scrollContainerRef.current.scrollLeft = offset;
-      prevPxPerDayRef.current = pxPerDay;
+      container.scrollLeft = offset;
+      isInitialMountRef.current = false;
+    } else if (centerDayIndexRef.current !== null && prevPxPerDayRef.current !== pxPerDay) {
+      // User zoom: maintain center
+      const centerDayIndex = centerDayIndexRef.current;
+      const centerPosition = centerDayIndex * pxPerDay;
+      const newScrollLeft = centerPosition - containerWidth / 2;
+      container.scrollLeft = Math.max(0, newScrollLeft);
+      centerDayIndexRef.current = null; // Reset after applying
     }
+    
+    prevPxPerDayRef.current = pxPerDay;
   }, [todayIndex, pxPerDay, calculateScrollOffset]);
 
   // Only render visible days + buffer for performance
@@ -206,6 +228,37 @@ export function CalendarGrid({
     }
   }, [handleScroll]);
 
+  // Mouse wheel zoom handler
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    // Zoom with vertical scroll (deltaY), allow horizontal scroll (deltaX) to pass through
+    const isVerticalScroll = Math.abs(e.deltaY) > Math.abs(e.deltaX);
+    
+    if (isVerticalScroll) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Calculate the center day index before zooming
+      if (scrollContainerRef.current) {
+        const container = scrollContainerRef.current;
+        const scrollLeft = container.scrollLeft;
+        const containerWidth = container.clientWidth;
+        const centerPosition = scrollLeft + containerWidth / 2;
+        const centerDayIndex = centerPosition / pxPerDay;
+        centerDayIndexRef.current = centerDayIndex;
+      }
+      
+      // Proportional zoom step (5% of current zoom level)
+      const zoomStep = Math.max(2, Math.round(pxPerDay * 0.05));
+      const delta = e.deltaY > 0 ? -zoomStep : zoomStep;
+      const newPxPerDay = Math.max(minZoom, Math.min(maxZoom, pxPerDay + delta));
+      
+      if (newPxPerDay !== pxPerDay) {
+        onZoomChange(newPxPerDay);
+      }
+    }
+    // If horizontal scroll, let it pass through for normal scrolling
+  }, [pxPerDay, onZoomChange, minZoom, maxZoom]);
+
   // Total width of the scrollable content
   const totalWidth = dates.length * pxPerDay;
 
@@ -219,7 +272,7 @@ export function CalendarGrid({
   );
 
   return (
-    <div className="calendar-grid" ref={scrollContainerRef}>
+    <div className="calendar-grid" ref={scrollContainerRef} onWheel={handleWheel}>
       <div className="calendar-content" style={{ width: totalWidth }}>
         {/* Month indicator bars */}
         {visibleMonthSegments.map((segment) => {
