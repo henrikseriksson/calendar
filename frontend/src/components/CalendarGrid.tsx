@@ -59,7 +59,7 @@ export function CalendarGrid({
   daysAfterToday = 60,
 }: CalendarGridProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const hasScrolledToToday = useRef(false);
+  const prevPxPerDayRef = useRef<number>(pxPerDay);
 
   // Generate date range
   const dates = useMemo(
@@ -72,6 +72,27 @@ export function CalendarGrid({
     const today = startOfDay(new Date());
     return dates.findIndex((d) => isSameDay(d, today));
   }, [dates]);
+
+  // Calculate scroll offset based on zoom level
+  const calculateScrollOffset = useCallback((pxPerDay: number, todayIndex: number, containerWidth: number): number => {
+    const todayPosition = todayIndex * pxPerDay;
+    
+    // Determine days offset from left based on zoom level
+    let daysOffset: number;
+    if (pxPerDay >= 150) {
+      // Day view (200px): Position today 1.5 days from left
+      daysOffset = 1.5;
+    } else if (pxPerDay >= 60) {
+      // Week view (100px): Position today 0.5 days from left (first or second day)
+      daysOffset = 0.5;
+    } else {
+      // Month view (30px): Position today 5 days from left (around day 4-7 in view)
+      daysOffset = 5;
+    }
+    
+    const offset = todayPosition - daysOffset * pxPerDay;
+    return Math.max(0, offset);
+  }, []);
 
   // Calculate month segments for the visible date range
   const monthSegments = useMemo((): MonthSegment[] => {
@@ -141,15 +162,15 @@ export function CalendarGrid({
     return segments;
   }, [dates]);
 
-  // Scroll to today on mount
+  // Scroll to today on mount and when zoom changes
   useEffect(() => {
-    if (scrollContainerRef.current && todayIndex >= 0 && !hasScrolledToToday.current) {
+    if (scrollContainerRef.current && todayIndex >= 0) {
       const containerWidth = scrollContainerRef.current.clientWidth;
-      const offset = todayIndex * pxPerDay - containerWidth / 2 + pxPerDay / 2;
-      scrollContainerRef.current.scrollLeft = Math.max(0, offset);
-      hasScrolledToToday.current = true;
+      const offset = calculateScrollOffset(pxPerDay, todayIndex, containerWidth);
+      scrollContainerRef.current.scrollLeft = offset;
+      prevPxPerDayRef.current = pxPerDay;
     }
-  }, [todayIndex, pxPerDay]);
+  }, [todayIndex, pxPerDay, calculateScrollOffset]);
 
   // Only render visible days + buffer for performance
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 30 });
